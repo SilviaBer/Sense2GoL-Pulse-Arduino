@@ -2,10 +2,11 @@
 #include <LED.h>
 #include <arduinoFFT.h>
 
-#define SAMPLES 1024
-#define SAMPLING_FREQ 30
+#define SAMPLES 256
+#define SAMPLING_FREQ 10
 #define BRPM_LOW 12
 #define BRPM_HIGH 25
+#define WINDOW_SIZE 5  // Numero di prese
 
 IFXRadarPulsedDoppler radarDev;
 LED Led;
@@ -24,6 +25,21 @@ unsigned long lastAnalysisTime = 0;
 // Variabili per rimuovere il background
 double baselineBRPM = 0;
 bool baselineSet = false;
+
+// Buffer per i valori recenti
+double bufferData[WINDOW_SIZE] = {0};  
+int brpmIndex = 0;
+
+double averageBreath(double newBRPM) {
+    bufferData[brpmIndex] = newBRPM;
+    brpmIndex = (brpmIndex + 1) % WINDOW_SIZE;
+
+    double sum = 0;
+    for (int i = 0; i < WINDOW_SIZE; i++) {
+        sum += bufferData[i];
+    }
+    return sum / WINDOW_SIZE;
+}
 
 void myErrorCallback(uint32_t error) {
     Serial.print("ERROR: 0x");
@@ -66,15 +82,19 @@ void processFFT() {
     double peakFrequency = (double)peakIndex * SAMPLING_FREQ / SAMPLES;
     double BRPM = peakFrequency * 60.0;
 
-    Serial.print("BRPM: ");
-    Serial.println(BRPM);
+    double smoothedBRPM = averageBreath(BRPM);
+    
+    //Stampa il valore stabilizzato
+    Serial.print("BRPM stabilizzato: ");
+    Serial.println(smoothedBRPM);
 
-    if (BRPM < BRPM_LOW) {
+    //Gestione LED in base al valore stabilizzato
+    if (smoothedBRPM < BRPM_LOW) {
         Led.On(LED_RED);
         Led.Off(LED_GREEN);
         Led.Off(LED_BLUE);
     } 
-    else if (BRPM >= BRPM_LOW && BRPM <= BRPM_HIGH) {
+    else if (smoothedBRPM >= BRPM_LOW && smoothedBRPM <= BRPM_HIGH) {
         Led.On(LED_GREEN);
         Led.Off(LED_RED);
         Led.Off(LED_BLUE);
