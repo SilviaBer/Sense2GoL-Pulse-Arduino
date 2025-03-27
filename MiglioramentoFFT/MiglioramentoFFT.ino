@@ -2,11 +2,12 @@
 #include <LED.h>
 #include <arduinoFFT.h>
 
-#define SAMPLES 256
+#define SAMPLES 512
 #define SAMPLING_FREQ 10
 #define BRPM_LOW 12
-#define BRPM_HIGH 25
+#define BRPM_HIGH 20
 #define WINDOW_SIZE 5  // Numero di prese
+#define COEFF_ALPHA 0.2
 
 IFXRadarPulsedDoppler radarDev;
 LED Led;
@@ -30,6 +31,10 @@ bool baselineSet = false;
 double bufferData[WINDOW_SIZE] = {0};  
 int brpmIndex = 0;
 
+//variabili per filtro
+double filteredBRPM = 0;
+
+//media dei valori recenti (per stabilizzare il valore)
 double averageBreath(double newBRPM) {
     bufferData[brpmIndex] = newBRPM;
     brpmIndex = (brpmIndex + 1) % WINDOW_SIZE;
@@ -39,6 +44,12 @@ double averageBreath(double newBRPM) {
         sum += bufferData[i];
     }
     return sum / WINDOW_SIZE;
+}
+
+//filtro
+double filterBRPM(double newBRPM){
+  filteredBRPM = COEFF_ALPHA * newBRPM + (1 - COEFF_ALPHA) * filteredBRPM ;
+  return filteredBRPM;
 }
 
 void myErrorCallback(uint32_t error) {
@@ -71,11 +82,11 @@ void processFFT() {
     double maxVal = 0;
 
     for (int i = startIdx; i <= endIdx; i++) {
-    double magnitude = sqrt(vReal[i] * vReal[i] + vImag[i] * vImag[i]);
-    if (magnitude > maxVal) {
+      double magnitude = sqrt(vReal[i] * vReal[i] + vImag[i] * vImag[i]);
+      if (magnitude > maxVal) {
         maxVal = magnitude;
-        peakIndex = i;
-    }
+          peakIndex = i;
+      }
     }
 
 
@@ -83,6 +94,7 @@ void processFFT() {
     double BRPM = peakFrequency * 60.0;
 
     double smoothedBRPM = averageBreath(BRPM);
+    //smoothedBRPM = filterBRPM(smoothedBRPM);
     
     //Stampa il valore stabilizzato
     Serial.print("BRPM stabilizzato: ");
@@ -90,9 +102,9 @@ void processFFT() {
 
     //Gestione LED in base al valore stabilizzato
     if (smoothedBRPM < BRPM_LOW) {
-        Led.On(LED_RED);
+        Led.Off(LED_RED);
         Led.Off(LED_GREEN);
-        Led.Off(LED_BLUE);
+        Led.On(LED_BLUE);
     } 
     else if (smoothedBRPM >= BRPM_LOW && smoothedBRPM <= BRPM_HIGH) {
         Led.On(LED_GREEN);
@@ -100,8 +112,8 @@ void processFFT() {
         Led.Off(LED_BLUE);
     } 
     else {
-        Led.On(LED_BLUE);
-        Led.Off(LED_RED);
+        Led.Off(LED_BLUE);
+        Led.On(LED_RED);
         Led.Off(LED_GREEN);
     }
 }
