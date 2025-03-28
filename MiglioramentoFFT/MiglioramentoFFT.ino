@@ -6,7 +6,7 @@
 #define SAMPLING_FREQ 10
 #define BRPM_LOW 12
 #define BRPM_HIGH 20
-#define WINDOW_SIZE 5  // Numero di prese
+#define WINDOW_SIZE 10 // Numero di prese
 #define COEFF_ALPHA 0.2
 
 IFXRadarPulsedDoppler radarDev;
@@ -94,7 +94,7 @@ void processFFT() {
     double BRPM = peakFrequency * 60.0;
 
     double smoothedBRPM = averageBreath(BRPM);
-    //smoothedBRPM = filterBRPM(smoothedBRPM);
+    //smoothedBRPM = filterBRPM(smoothedBRPM);  //torgliere il commento per applicare il filtro
     
     //Stampa il valore stabilizzato
     Serial.print("BRPM stabilizzato: ");
