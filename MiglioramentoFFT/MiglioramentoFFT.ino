@@ -4,7 +4,7 @@
 
 #define SAMPLES 512
 #define SAMPLING_FREQ 10
-#define BRPM_LOW 12
+#define BRPM_LOW 8
 #define BRPM_HIGH 20
 #define WINDOW_SIZE 10 // Numero di prese
 #define COEFF_ALPHA 0.2
