@@ -1,3 +1,5 @@
+//Analisi del respiro tramite radar Sense2GoL Pulse 
+
 #include <IFXRadarPulsedDoppler.h>
 #include <LED.h>
 #include <arduinoFFT.h>
@@ -11,6 +13,9 @@
 
 IFXRadarPulsedDoppler radarDev;
 LED Led;
+
+//contatore led blu
+int count_led_blue = 0;
 
 // Variabili per l'analisi FFT
 double vReal[SAMPLES];
@@ -102,16 +107,24 @@ void processFFT() {
 
     //Gestione LED in base al valore stabilizzato
     if (smoothedBRPM < BRPM_LOW) {
+      if(count_led_blue <= 40){     
+        count_led_blue++;
+      }
+      else {
+        count_led_blue = 0;
         Led.Off(LED_RED);
         Led.Off(LED_GREEN);
         Led.On(LED_BLUE);
+      }       
     } 
     else if (smoothedBRPM >= BRPM_LOW && smoothedBRPM <= BRPM_HIGH) {
+        count_led_blue = 0;
         Led.On(LED_GREEN);
         Led.Off(LED_RED);
         Led.Off(LED_BLUE);
     } 
     else {
+        count_led_blue = 0;
         Led.Off(LED_BLUE);
         Led.On(LED_RED);
         Led.Off(LED_GREEN);
